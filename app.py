@@ -1,7 +1,6 @@
 import sys
 import os
 
-# Allow imports from the project root
 sys.path.insert(0, os.path.dirname(__file__))
 
 import logging
@@ -22,14 +21,12 @@ from charts.yoy_chart import build_yoy_chart
 
 logging.basicConfig(level=logging.INFO)
 
-# ── Page config ──────────────────────────────────────────────
 st.set_page_config(
     page_title="Stock Portfolio Dashboard",
     page_icon="📈",
     layout="wide",
 )
 
-# ── DB init ──────────────────────────────────────────────────
 @st.cache_resource
 def get_engine():
     engine = init_db()
@@ -37,7 +34,6 @@ def get_engine():
 
 engine = get_engine()
 
-# ── Sidebar ──────────────────────────────────────────────────
 st.sidebar.title("⚙️ Configuration")
 
 ticker_input = st.sidebar.text_input(
@@ -69,7 +65,6 @@ load_btn = st.sidebar.button("Load / Refresh Data", type="primary", use_containe
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Benchmark: {BENCHMARK_TICKER} (S&P 500)")
 
-# ── Load data ─────────────────────────────────────────────────
 if load_btn or "data_loaded" not in st.session_state:
     with st.spinner("Fetching data from Yahoo Finance..."):
         try:
@@ -89,7 +84,6 @@ if load_btn or "data_loaded" not in st.session_state:
             st.error(f"Data fetch failed: {e}")
             st.stop()
 
-# ── Fetch from DB ─────────────────────────────────────────────
 all_tickers = list(dict.fromkeys(tickers + [BENCHMARK_TICKER]))
 prices_df = get_price_history(engine, all_tickers, str(start_date), str(end_date))
 
@@ -97,11 +91,9 @@ if prices_df.empty:
     st.warning("No data found. Click 'Load / Refresh Data'.")
     st.stop()
 
-# ── Header ────────────────────────────────────────────────────
 st.title("📈 Stock Portfolio Risk & Performance Dashboard")
 st.caption(f"Data range: {prices_df['date'].min()} → {prices_df['date'].max()}  |  Tickers: {', '.join(tickers)}")
 
-# ── KPI cards ────────────────────────────────────────────────
 risk_df = build_risk_summary(prices_df, risk_free_rate=risk_free_rate)
 cols = st.columns(len(risk_df))
 for col, (ticker, row) in zip(cols, risk_df.iterrows()):
@@ -113,17 +105,14 @@ for col, (ticker, row) in zip(cols, risk_df.iterrows()):
 
 st.markdown("---")
 
-# ── Price performance chart ───────────────────────────────────
 peer_wide = compute_peer_comparison(prices_df)
 st.plotly_chart(build_price_chart(peer_wide), use_container_width=True)
 
-# ── Risk metrics table ────────────────────────────────────────
 st.subheader("Risk Metrics")
 st.dataframe(risk_df, use_container_width=True)
 
 st.markdown("---")
 
-# ── Two-column charts ─────────────────────────────────────────
 left, right = st.columns(2)
 
 with left:
@@ -138,10 +127,8 @@ with right:
 
 st.markdown("---")
 
-# ── YoY returns ───────────────────────────────────────────────
 st.subheader("Year-over-Year Returns")
 
-# Try SQL-computed YoY first, fall back to pandas
 try:
     yoy_df = get_yoy_returns(engine, tickers)
     if yoy_df.empty:
@@ -154,7 +141,6 @@ if not yoy_df.empty:
 
 st.markdown("---")
 
-# ── SQL transparency section ──────────────────────────────────
 with st.expander("🗄️ View SQL Queries used in this dashboard"):
     sql_path = os.path.join(os.path.dirname(__file__), "sql", "queries.sql")
     if os.path.exists(sql_path):
